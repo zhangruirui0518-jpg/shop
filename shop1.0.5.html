@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>最终稳定版商城</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css">
+<style>
+  .card{display:flex;flex-wrap:wrap;gap:1rem;padding:1rem;border:1px solid #eee;border-radius:12px;margin-bottom:1rem}
+  .card img{width:120px;height:120px;object-fit:cover;border-radius:10px}
+  .info{flex:1;min-width:200px}
+  .price{color:#e53935}
+  .center{text-align:center}
+  @media(max-width:600px){.card{flex-direction:column;align-items:center;text-align:center}}
+</style>
+</head>
+<body>
+
+<nav class="container-fluid">
+  <ul><li><strong>🛒 商城最终稳定版</strong></li></ul>
+</nav>
+
+<main class="container">
+<div id="list"></div>
+<div id="empty" class="center">暂无商品</div>
+
+<dialog id="detail">
+<h3 id="dt"></h3>
+< img id="di" width="100%">
+<p id="dd"></p >
+<button onclick="buyNow()">购买</button>
+<button onclick="detail.close()">关闭</button>
+</dialog>
+
+<dialog id="userBox">
+<input id="g" placeholder="年级">
+<input id="c" placeholder="班级">
+<input id="n" placeholder="姓名">
+<button onclick="confirmUser()">确认</button>
+</dialog>
+
+<section id="pay" class="center" style="display:none">
+<p id="ut"></p >
+< img id="qr" width="200">
+<button onclick="submitOrder()">已付款</button>
+</section>
+
+<section>
+<input id="pass" type="password" placeholder="后台密码">
+<button onclick="login()">登录</button>
+<div id="admin" style="display:none">
+<input type="file" id="img">
+<input type="file" id="img2">
+<input id="t" placeholder="标题">
+<input id="d" placeholder="描述">
+<input id="p" placeholder="价格">
+<input id="s" placeholder="库存">
+<button onclick="add()">添加商品</button>
+<button onclick="clearAll()" style="background:red">清空</button>
+<div id="orders"></div>
+</div>
+</section>
+
+</main>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
+import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
+
+const app=initializeApp({apiKey:"AIzaSyA3JosDA_TWRaSZmG3QiuZOX8eT4gSdp_w",authDomain:"shop-8c51e.firebaseapp.com",projectId:"shop-8c51e"});
+const db=getFirestore(app);
+
+let arr=[];let cur=null;let user={};
+
+window.load=async()=>{
+list.innerHTML='';arr=[];
+const snap=await getDocs(collection(db,'products'));
+snap.forEach(d=>{
+const p=d.data();p.id=d.id;
+arr.push(p);
+const img=p.img?`< img src='${p.img}'>`:`<div style='width:120px;height:120px;background:#eee'>无图</div>`;
+list.innerHTML+=`<div class='card'>${img}<div class='info'>
+<h3>${p.title}</h3>
+<p>${p.desc}</p >
+<p class='price'>¥${p.price}</p >
+<p>库存:${p.stock}</p >
+<button onclick="view('${p.id}')">查看</button>
+<button onclick="remove('${p.id}')">删除</button>
+</div></div>`;
+});
+empty.style.display=arr.length?'none':'block';
+};
+
+window.view=id=>{
+cur=arr.find(i=>i.id===id);
+dt.innerText=cur.title;
+dd.innerText=cur.desc;
+di.src=cur.img||'';
+detail.showModal();
+};
+
+window.buyNow=()=>{detail.close();userBox.showModal();};
+
+window.confirmUser=()=>{
+user={g:g.value,c:c.value,n:n.value};
+userBox.close();
+ut.innerText=`${user.g}-${user.c}-${user.n}`;
+qr.src=cur.qr||'';
+pay.style.display='block';
+};
+
+window.submitOrder=async()=>{
+await addDoc(collection(db,'orders'),{...user,p:cur.id});
+await updateDoc(doc(db,'products',cur.id),{stock:cur.stock-1});
+alert('完成');
+pay.style.display='none';
+load();
+};
+
+window.login=()=>{if(pass.value==='suis2026'){admin.style.display='block';loadOrders();}};
+
+window.add=async()=>{
+const read=f=>new Promise(r=>{if(!f)return r('');const fr=new FileReader();fr.onload=()=>r(fr.result);fr.readAsDataURL(f);});
+const imgData=await read(img.files[0]);
+await addDoc(collection(db,'products'),{title:t.value,desc:d.value,price:+p.value,stock:+s.value,img:imgData});
+load();
+};
+
+// 🔥 删除（真正删除服务器数据）
+window.remove=async id=>{
+if(!confirm('确定删除？不可恢复'))return;
+await deleteDoc(doc(db,'products',id));
+load();
+};
+
+window.clearAll=async()=>{
+const snap=await getDocs(collection(db,'products'));
+snap.forEach(async d=>await deleteDoc(doc(db,'products',d.id)));
+load();
+};
+
+window.loadOrders=async()=>{
+orders.innerHTML='';
+const snap=await getDocs(collection(db,'orders'));
+snap.forEach(d=>{
+const o=d.data();
+orders.innerHTML+=`<p>${o.n} ${o.g}-${o.c}</p >`;
+});
+};
+
+load();
+</script>
+
+</body>
+</html>
