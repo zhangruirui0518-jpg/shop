@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>我的商城</title>
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css">
+
+<style>
+img { max-width: 100%; border-radius: 10px; }
+.product { border:1px solid #ddd; padding:15px; margin:10px; border-radius:10px;}
+</style>
+</head>
+
+<body>
+
+<nav class="container-fluid">
+<ul><li><strong>我的商城</strong></li></ul>
+<ul>
+<li><a href=" " onclick="showAdmin()">后台</a ></li>
+</ul>
+</nav>
+
+<main class="container">
+
+<h2>商品列表</h2>
+<div id="productList"></div>
+
+</main>
+
+<!-- 后台 -->
+<div id="adminPanel" style="display:none" class="container">
+<h3>后台管理</h3>
+
+<input type="password" id="adminPass" placeholder="输入密码">
+<button onclick="login()">登录</button>
+
+<div id="adminContent" style="display:none">
+
+<h4>添加商品</h4>
+
+<input id="name" placeholder="商品名称">
+<input id="price" placeholder="价格">
+<input id="stock" placeholder="库存">
+<input id="img" placeholder="图片链接（图床URL）">
+
+<button onclick="addProduct()">添加商品</button>
+
+<button onclick="clearAll()">一键清空</button>
+
+<div id="adminList"></div>
+
+</div>
+</div>
+
+<!-- 购买弹窗 -->
+<div id="buyBox" style="display:none" class="container">
+<h3>填写信息</h3>
+
+<input id="grade" placeholder="年级">
+<input id="class" placeholder="班级">
+<input id="nameUser" placeholder="姓名">
+
+<button onclick="confirmBuy()">确认信息</button>
+</div>
+
+<script>
+
+let products = JSON.parse(localStorage.getItem("products") || "[]");
+
+function save() {
+  localStorage.setItem("products", JSON.stringify(products));
+}
+
+// 显示商品
+function render() {
+  const list = document.getElementById("productList");
+  list.innerHTML = "";
+
+  products.forEach((p, i) => {
+    if (p.hidden) return;
+
+    list.innerHTML += `
+      <div class="product">
+        < img src="${p.img}" onerror="this.src='https://via.placeholder.com/200?text=暂无图片'">
+        <h4>${p.name}</h4>
+        <p>价格：${p.price}</p >
+        <p>库存：${p.stock}</p >
+        <button onclick="buy(${i})">购买</button>
+      </div>
+    `;
+  });
+}
+
+// 后台显示
+function renderAdmin() {
+  const list = document.getElementById("adminList");
+  list.innerHTML = "";
+
+  products.forEach((p, i) => {
+    list.innerHTML += `
+      <div class="product">
+        <h4>${p.name}</h4>
+        <button onclick="remove(${i})">删除</button>
+        <button onclick="toggle(${i})">${p.hidden ? "上架" : "下架"}</button>
+      </div>
+    `;
+  });
+}
+
+// 添加商品
+function addProduct() {
+  const name = document.getElementById("name").value;
+  const price = document.getElementById("price").value;
+  const stock = document.getElementById("stock").value;
+  const img = document.getElementById("img").value;
+
+  if (!name || !price) return alert("填写完整");
+
+  products.push({ name, price, stock, img, hidden:false });
+
+  save();
+  render();
+  renderAdmin();
+}
+
+// 删除
+function remove(i) {
+  products.splice(i,1);
+  save();
+  render();
+  renderAdmin();
+}
+
+// 上下架
+function toggle(i) {
+  products[i].hidden = !products[i].hidden;
+  save();
+  render();
+  renderAdmin();
+}
+
+// 清空
+function clearAll() {
+  if(confirm("确定清空？")){
+    products=[];
+    save();
+    render();
+    renderAdmin();
+  }
+}
+
+// 登录
+function login() {
+  const pass = document.getElementById("adminPass").value;
+  if(pass==="suis2026"){
+    document.getElementById("adminContent").style.display="block";
+    renderAdmin();
+  }else{
+    alert("密码错误");
+  }
+}
+
+// 显示后台
+function showAdmin() {
+  document.getElementById("adminPanel").style.display="block";
+}
+
+// 购买
+let current = null;
+
+function buy(i){
+  current = i;
+  document.getElementById("buyBox").style.display="block";
+}
+
+// 确认信息
+function confirmBuy(){
+  const g = document.getElementById("grade").value;
+  const c = document.getElementById("class").value;
+  const n = document.getElementById("nameUser").value;
+
+  if(!g||!c||!n) return alert("填写完整");
+
+  alert("请扫码付款（这里放你的二维码图片）");
+
+  products[current].stock--;
+  save();
+  render();
+
+  alert("购买成功！");
+  document.getElementById("buyBox").style.display="none";
+}
+
+// 初始化
+render();
+
+</script>
+
+</body>
+</html>
